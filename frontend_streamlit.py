@@ -4,12 +4,19 @@ import pickle
 
 st.set_page_config(page_title="Prediksi Hospitalisasi COVID", layout="centered")
 
-# Load model pipeline
-with open('random_forest_model.pkl', 'rb') as f:
-    model = pickle.load(f)
-
 st.title("🩺 Prediksi Hospitalisasi Pasien COVID-Related Disease")
 
+# Load model dengan penanganan error
+st.write("Memuat model...")
+try:
+    with open('random_forest_model.pkl', 'rb') as f:
+        model = pickle.load(f)
+    st.success("✅ Model berhasil dimuat.")
+except Exception as e:
+    st.error(f"❌ Gagal memuat model: {e}")
+    st.stop()
+
+# Fungsi input dari pengguna
 def user_input():
     age = st.slider('Umur', 0, 100, 30)
     doses = st.slider('Jumlah Dosis Vaksin yang Diterima', 0, 4, 2)
@@ -50,12 +57,14 @@ def user_input():
 
     return pd.DataFrame(data)
 
+# Ambil input
 input_df = user_input()
 
+# Prediksi
 if st.button('Prediksi'):
     try:
-        prediction = model.predict(input_df)
-        result = '🛏️ Dirawat (Hospitalized)' if prediction[0] == 1 else '🏠 Tidak Dirawat'
-        st.success(f'Hasil Prediksi: {result}')
+        pred = model.predict(input_df)
+        hasil = "🛏️ Dirawat (Hospitalized)" if pred[0] == 1 else "🏠 Tidak Dirawat"
+        st.success(f"Hasil Prediksi: {hasil}")
     except Exception as e:
-        st.error(f'Error saat memproses prediksi: {e}')
+        st.error(f"❌ Terjadi error saat melakukan prediksi: {e}")
