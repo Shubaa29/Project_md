@@ -1,22 +1,22 @@
 import streamlit as st
 import pandas as pd
-import pickle
+import cloudpickle  # Ganti dari pickle ke cloudpickle
 
 st.set_page_config(page_title="Prediksi Hospitalisasi COVID", layout="centered")
 
 st.title("🩺 Prediksi Hospitalisasi Pasien COVID-Related Disease")
 
-# Load model dengan penanganan error
+# Load model
 st.write("Memuat model...")
 try:
     with open('random_forest_model.pkl', 'rb') as f:
-        model = pickle.load(f)
+        model = cloudpickle.load(f)
     st.success("✅ Model berhasil dimuat.")
 except Exception as e:
     st.error(f"❌ Gagal memuat model: {e}")
     st.stop()
 
-# Fungsi input dari pengguna
+# Form input
 def user_input():
     age = st.slider('Umur', 0, 100, 30)
     doses = st.slider('Jumlah Dosis Vaksin yang Diterima', 0, 4, 2)
@@ -36,7 +36,7 @@ def user_input():
     occupation = st.selectbox('Pekerjaan', ['Healthcare', 'Essential', 'Non-Essential'])
     smoking = st.selectbox('Perokok', ['Yes', 'No'])
 
-    data = {
+    return pd.DataFrame({
         'Age': [age],
         'Doses_Received': [doses],
         'BMI': [bmi],
@@ -53,18 +53,14 @@ def user_input():
         'Vaccination_Status': [vax_status],
         'Occupation': [occupation],
         'Smoking_Status': [smoking]
-    }
+    })
 
-    return pd.DataFrame(data)
+df_input = user_input()
 
-# Ambil input
-input_df = user_input()
-
-# Prediksi
 if st.button('Prediksi'):
     try:
-        pred = model.predict(input_df)
-        hasil = "🛏️ Dirawat (Hospitalized)" if pred[0] == 1 else "🏠 Tidak Dirawat"
-        st.success(f"Hasil Prediksi: {hasil}")
+        pred = model.predict(df_input)
+        result = '🛏️ Dirawat (Hospitalized)' if pred[0] == 1 else '🏠 Tidak Dirawat'
+        st.success(f"Hasil Prediksi: {result}")
     except Exception as e:
-        st.error(f"❌ Terjadi error saat melakukan prediksi: {e}")
+        st.error(f"❌ Terjadi error saat prediksi: {e}")
