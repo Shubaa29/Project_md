@@ -1,73 +1,50 @@
-
-
 import streamlit as st
-import pandas as pd
 import pickle
+import base64
+import io
 
-# Load model
-with open("random_forest_model.pkl", "rb") as f:
-    model = pickle.load(f)
+# =======================
+# Embedded model (base64)
+# =======================
+model_base64 = """<ISI_STRING_BASE64_DI_SINI>"""
 
-st.title("Prediksi Risiko Penyakit Terkait COVID-19")
+# Decode model
+model_bytes = base64.b64decode(model_base64)
+model = pickle.load(io.BytesIO(model_bytes))
 
-st.markdown("Isi data di bawah untuk memprediksi tingkat risiko:")
+# =======================
+# Streamlit App
+# =======================
+st.title("COVID Risk Prediction App")
 
-# Sidebar Form Input
-st.sidebar.header("Form Input Pengguna")
+st.markdown("Masukkan data pasien di bawah ini untuk memprediksi risiko penyakit terkait COVID.")
 
-def user_input():
-    Age = st.sidebar.slider("Umur", 0, 100, 30)
-    Gender = st.sidebar.selectbox("Jenis Kelamin", ["Male", "Female"])
-    Region = st.sidebar.selectbox("Wilayah", ["Urban", "Rural"])
-    Occupation = st.sidebar.selectbox("Pekerjaan", ["Healthcare", "Non-Healthcare"])
-    Symptoms = st.sidebar.selectbox("Mengalami Gejala?", ["Yes", "No"])
-    Preexisting_Condition = st.sidebar.selectbox("Kondisi Penyakit Bawaan?", ["Yes", "No"])
-    Smoking_Status = st.sidebar.selectbox("Status Merokok", ["Smoker", "Non-Smoker"])
-    BMI = st.sidebar.slider("BMI", 10.0, 50.0, 22.0)
-    Vaccination_Status = st.sidebar.selectbox("Status Vaksinasi", ["Vaccinated", "Not Vaccinated"])
-    Doses_Received = st.sidebar.slider("Jumlah Dosis Vaksin", 0, 4, 2)
-    Reinfection = st.sidebar.selectbox("Reinfeksi?", ["Yes", "No"])
-    COVID_Strain = st.sidebar.selectbox("Strain COVID", ["Alpha", "Beta", "Delta", "Omicron"])
-    ICU_Admission = st.sidebar.selectbox("Pernah Masuk ICU?", ["Yes", "No"])
-    Ventilator_Support = st.sidebar.selectbox("Pernah Pakai Ventilator?", ["Yes", "No"])
-    Recovered = st.sidebar.selectbox("Sudah Sembuh?", ["Yes", "No"])
-    Severity = st.sidebar.selectbox("Tingkat Keparahan", ["Mild", "Moderate", "Severe"])
+# Form input user
+age = st.slider("Usia", 0, 100, 25)
+bmi = st.number_input("BMI", min_value=10.0, max_value=50.0, value=22.5)
+gender = st.selectbox("Jenis Kelamin", ["Male", "Female", "Other"])
+region = st.selectbox("Region", ["Asia", "Europe", "Africa", "America", "Oceania"])
+smoking_status = st.selectbox("Status Merokok", ["Never", "Former", "Current"])
+preexisting_condition = st.selectbox("Penyakit Penyerta", ["Yes", "No"])
+vaccination_status = st.selectbox("Status Vaksinasi", ["Not Vaccinated", "Partially", "Fully"])
+symptoms = st.selectbox("Memiliki Gejala?", ["Yes", "No"])
+severity = st.selectbox("Tingkat Keparahan", ["Mild", "Moderate", "Severe"])
+icu_admission = st.selectbox("Masuk ICU?", ["Yes", "No"])
+ventilator_support = st.selectbox("Butuh Ventilator?", ["Yes", "No"])
+recovered = st.selectbox("Sudah Sembuh?", ["Yes", "No"])
 
-    # Gabungkan semua jadi dataframe
-    data = {
-        "Age": Age,
-        "Gender": Gender,
-        "Region": Region,
-        "Occupation": Occupation,
-        "Symptoms": Symptoms,
-        "Preexisting_Condition": Preexisting_Condition,
-        "Smoking_Status": Smoking_Status,
-        "BMI": BMI,
-        "Vaccination_Status": Vaccination_Status,
-        "Doses_Received": Doses_Received,
-        "Reinfection": Reinfection,
-        "COVID_Strain": COVID_Strain,
-        "ICU_Admission": ICU_Admission,
-        "Ventilator_Support": Ventilator_Support,
-        "Recovered": Recovered,
-        "Severity": Severity,
-    }
-
-    return pd.DataFrame([data])
-
-# Ambil input pengguna
-input_df = user_input()
-
-st.subheader("Data yang Diberikan")
-st.write(input_df)
-
-# Encode categorical features jika perlu (opsional: jika model pakai OneHot atau LabelEncoder)
-# Pastikan model kamu tidak perlu preprocessing tambahan (sudah termasuk di pipeline)
-
-# Prediksi
-prediction = model.predict(input_df)
-prediction_proba = model.predict_proba(input_df)
-
-st.subheader("Hasil Prediksi")
-st.write(f"**Risiko Terkait COVID:** {'Tinggi' if prediction[0] == 1 else 'Rendah'}")
-st.write(f"**Probabilitas:** Rendah: {prediction_proba[0][0]:.2f} | Tinggi: {prediction_proba[0][1]:.2f}")
+# Saat tombol ditekan
+if st.button("Prediksi Risiko"):
+    # Susun input sesuai urutan fitur model
+    input_data = [[
+        age, gender, region, bmi, smoking_status, preexisting_condition,
+        vaccination_status, symptoms, severity, icu_admission,
+        ventilator_support, recovered
+    ]]
+    
+    # Prediksi
+    try:
+        prediction = model.predict(input_data)[0]
+        st.success(f"Hasil Prediksi: {prediction}")
+    except Exception as e:
+        st.error(f"Gagal prediksi: {e}")
